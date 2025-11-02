@@ -1278,14 +1278,17 @@ bool CheckQuit(void) {
     std::string warn = section->Get_string("quit warning");
     bool quit = section->Get_bool("allow quit after warning");
     if (sdl.desktop.fullscreen) GFX_SwitchFullScreen();
-    if (warn == "true") {
-        if (!quit) {
-            systemmessagebox("Quit DOSBox-X warning", MSG_Get("QUIT_DISABLED"),"ok", "warning", 1);
-            return false;
-        } else
-            return systemmessagebox("Quit DOSBox-X warning", MSG_Get("QUIT_CONFIRM"),"yesno", "question", 1);
-    } else if (warn == "false")
-        return true;
+    /// Config option does not work. Please don't break standard system behaviour. I would like app to quit on Ctrl+C.
+    if (!control->opt_headless) {
+        if (warn == "true") {
+            if (!quit) {
+                systemmessagebox("Quit DOSBox-X warning", MSG_Get("QUIT_DISABLED"),"ok", "warning", 1);
+                return false;
+            } else
+                return systemmessagebox("Quit DOSBox-X warning", MSG_Get("QUIT_CONFIRM"),"yesno", "question", 1);
+        } else if (warn == "false")
+            return true;
+    }
     if (dos_kernel_disabled&&strcmp(RunningProgram, "DOSBOX-X")) {
         if (!quit) {
             systemmessagebox("Quit DOSBox-X warning", MSG_Get("QUIT_GUEST_DISABLED"),"ok", "warning", 1);
@@ -6840,8 +6843,8 @@ static void launcheditor(std::string edit) {
     if (control->configfiles.size() && control->configfiles.front().size())
         execlp(edit.c_str(),edit.c_str(),control->configfiles.front().c_str(),(char*) 0);
     std::string path,file;
-    Cross::CreatePlatformConfigDir(path);
-    Cross::GetPlatformConfigName(file);
+    path = Cross::CreatePlatformConfigDir();
+    file = Cross::GetPlatformConfigName();
     path += file;
     FILE* f = fopen(path.c_str(),"r");
     if(!f && !control->PrintConfig(path.c_str())) {
@@ -6881,7 +6884,7 @@ static void launchcaptures(std::string const& edit) {
         exit(1);
     } else {
         path = "";
-        Cross::CreatePlatformConfigDir(path);
+        path = Cross::CreatePlatformConfigDir();
         path += file;
         Cross::CreateDir(path);
         stat(path.c_str(),&cstat);
@@ -6911,7 +6914,7 @@ static void launchsaves(std::string const& edit) {
         exit(1);
     } else {
         path = "";
-        Cross::CreatePlatformConfigDir(path);
+        path = Cross::CreatePlatformConfigDir();
         path += file;
         Cross::CreateDir(path);
         stat(path.c_str(),&cstat);
@@ -6928,8 +6931,8 @@ static void launchsaves(std::string const& edit) {
 
 static void printconfiglocation() {
     std::string path,file;
-    Cross::CreatePlatformConfigDir(path);
-    Cross::GetPlatformConfigName(file);
+    path =Cross::CreatePlatformConfigDir();
+    file = Cross::GetPlatformConfigName();
     path += file;
 
     FILE* f = fopen(path.c_str(),"r");
@@ -6950,8 +6953,8 @@ static void eraseconfigfile() {
         show_warning("Warning: dosbox-x.conf (or dosbox.conf) exists in current working directory.\nThis will override the configuration file at runtime.\n");
     }
     std::string path,file;
-    Cross::GetPlatformConfigDir(path);
-    Cross::GetPlatformConfigName(file);
+    path = Cross::GetPlatformConfigDir();
+    file = Cross::GetPlatformConfigName();
     path += file;
     f = fopen(path.c_str(),"r");
     if (!f) exit(0);
@@ -6970,7 +6973,7 @@ static void erasemapperfile() {
     }
 
     std::string path,file=MAPPERFILE;
-    Cross::GetPlatformConfigDir(path);
+    path = Cross::GetPlatformConfigDir();
     path += file;
     FILE* f = fopen(path.c_str(),"r");
     if (!f) exit(0);
@@ -7163,6 +7166,7 @@ bool DOSBOX_parse_argv() {
             fprintf(stderr,"                                          Make sure to surround the string in quotes to cover spaces.\n");
             fprintf(stderr,"  -time-limit <n>                         Kill the emulator after 'n' seconds\n");
             fprintf(stderr,"  -fastlaunch                             Fast launch mode (skip the BIOS logo and welcome banner)\n");
+            fprintf(stderr,"  -headless                               Run DOSBox-X silently, writing stdout and stderr to the terminal.\n");
 #if C_DEBUG
             fprintf(stderr,"  -helpdebug                              Show debug-related options\n");
 #endif
@@ -7430,6 +7434,14 @@ bool DOSBOX_parse_argv() {
         else if (optname == "socket") {
             if (!control->cmdline->NextOptArgv(tmp)) return false;
             socknum = std::stoi(tmp);
+        } else if (optname == "headless") {
+            putenv(const_cast<char*>("SDL_VIDEODRIVER=dummy"));
+            putenv(const_cast<char*>("SDL_AUDIODRIVER=dummy"));
+            control->opt_headless = true;
+            control->opt_nogui = true;
+            control->opt_exit = true;
+            control->opt_nomenu = true;
+            control->opt_fastlaunch = true;
         } else {
             printf("WARNING: Unknown option %s (first parsing stage)\n",optname.c_str());
         }
@@ -8120,8 +8132,8 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
         std::string tmp,config_path,config_combined;
 
         /* -- Parse configuration files */
-        Cross::GetPlatformConfigDir(config_path);
-        Cross::GetPlatformConfigName(tmp);
+        config_path = Cross::GetPlatformConfigDir();
+        tmp = Cross::GetPlatformConfigName();
 
         if (exepath.size()) {
             control->ParseConfigFile((exepath + "dosbox-x.conf").c_str());
@@ -8159,7 +8171,7 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
         usecfgdir = false;
     } else if (workdiropt == "userconfig") {
         std::string config_path;
-        Cross::GetPlatformConfigDir(config_path);
+        config_path = Cross::GetPlatformConfigDir();
         if (config_path.size()) {
             if (chdir(config_path.c_str()) == -1) {
                 LOG(LOG_GUI, LOG_ERROR)("sdlmain.cpp main() failed to change directories for workdiropt 'userconfig'.");
@@ -8203,7 +8215,7 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
             }
 #endif
             std::string res_path;
-            Cross::GetPlatformResDir(res_path);
+            res_path = Cross::GetPlatformResDir();
             if(stat((res_path + "dosbox-x.conf").c_str(), &st) == 0) {
                 if(S_ISREG(st.st_mode)) {
                     control->opt_promptfolder = 0;
@@ -8340,9 +8352,9 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
 #endif
     std::string tmp, config_path, res_path, config_combined;
     /* -- Parse configuration files */
-    Cross::GetPlatformConfigDir(config_path);
-    Cross::GetPlatformResDir(res_path);
-    Cross::GetPlatformConfigName(tmp);
+    config_path = Cross::GetPlatformConfigDir();
+    res_path = Cross::GetPlatformResDir();
+    tmp = Cross::GetPlatformConfigName();
     config_combined = config_path + tmp;
     {
 
@@ -8396,7 +8408,7 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
                         tsec->HandleInputline("working directory option=autoprompt");
                 }
                 //Try to create the userlevel configfile.
-                Cross::CreatePlatformConfigDir(config_path);
+                config_path = Cross::CreatePlatformConfigDir();
 
                 LOG(LOG_MISC,LOG_DEBUG)("Attempting to write config file according to -userconf, to %s",config_combined.c_str());
                 if (control->PrintConfig(config_combined.c_str())) {
@@ -8764,7 +8776,7 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
             }
         } else if (workdiropt == "userconfig") {
             std::string config_path;
-            Cross::GetPlatformConfigDir(config_path);
+            config_path = Cross::GetPlatformConfigDir();
             if(config_path.size()) {
                 if(chdir(config_path.c_str()) == -1) {
                     LOG(LOG_GUI, LOG_ERROR)("sdlmain.cpp main() failed to change directories for workdiropt 'userconfig'.");

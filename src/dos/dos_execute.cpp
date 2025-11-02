@@ -22,6 +22,7 @@
 
 #include "dosbox.h"
 #include "logging.h"
+#include "control.h"
 #include "mem.h"
 #include "dos_inc.h"
 #include "regs.h"
@@ -163,6 +164,10 @@ void DOS_Terminate(uint16_t pspseg,bool tsr,uint8_t exitcode) {
 	}
 #endif
 
+// Get DOS exit code and return it to the host machine
+    if (control->opt_headless) {
+        exit(dos.return_code);
+    }
 	return;
 }
 

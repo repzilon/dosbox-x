@@ -17,6 +17,7 @@
  */
 
 
+#include <iostream>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
@@ -832,7 +833,34 @@ bool DOS_WriteFile(uint16_t entry,const uint8_t * data,uint16_t * amount,bool fc
 	uint16_t towrite=*amount;
 	bool ret=Files[handle]->Write(data,&towrite);
 	*amount=towrite;
-	return ret;
+
+    if (control->opt_headless) {
+    #if defined(WIN32)
+        // Bodge for Windows console host so headless output shows up
+        // TODO this fixes it for standard Windows terminal, but breaks it for MSYS (no text output). Why?
+        if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+            AllocConsole();
+        }
+
+        // Reopen std handles to the console
+        FILE* fp;
+        freopen_s(&fp, "CONOUT$", "w", stdout);
+        freopen_s(&fp, "CONOUT$", "w", stderr);
+        freopen_s(&fp, "CONIN$", "r", stdin);
+        std::ios::sync_with_stdio();
+    #endif
+
+    // Redirect all STDOUT/STDERR to terminal
+        if (entry == STDOUT) {
+            std::cout.write(reinterpret_cast<const char *>(data), *amount);
+            std::cout.flush();
+        } else if (entry == STDERR) {
+            std::cerr.write(reinterpret_cast<const char *>(data), *amount);
+            std::cerr.flush();
+        }
+
+        return ret;
+    }
 }
 
 bool DOS_SeekFile(uint16_t entry,uint32_t * pos,uint32_t type,bool fcb) {
