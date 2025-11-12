@@ -1847,9 +1847,7 @@ void CONFIG::Run(void) {
                             WriteOut("%s\n",format);
                             first_shell->SetEnv("CONFIG",format);
                         } else if (!strcasecmp(pvars[0].c_str(), "lastmount")) {
-                            if (!control->opt_headless) {
-                                if (lastmount) WriteOut("%c:\n",lastmount);
-                            }
+                            if (!control->opt_headless && lastmount) WriteOut("%c:\n",lastmount);
                             first_shell->SetEnv("CONFIG",lastmount?(std::string(1, lastmount) + ":").c_str():"");
                         } else
                             WriteOut(MSG_Get("PROGRAM_CONFIG_PROPERTY_ERROR"));
