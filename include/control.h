@@ -77,7 +77,7 @@ public:
     bool opt_date_host_forced = false;
     bool opt_used_defaultdir = false;
     bool opt_defaultmapper = false;
-    bool opt_fastbioslogo = true;
+    bool opt_fastbioslogo = false;
     bool opt_print_ticks = false;
     bool opt_break_start = false;
     bool opt_erasemapper = false;
@@ -87,7 +87,7 @@ public:
     bool opt_noautoexec = false;
     bool opt_securemode = false;
     bool opt_fullscreen = false;
-    bool opt_fastlaunch = true;
+    bool opt_fastlaunch = false;
     bool opt_showcycles = false;
     bool opt_earlydebug = false;
     bool opt_logfileio = false;
@@ -102,17 +102,17 @@ public:
     bool opt_log_con = false;
     bool opt_console = false;
     bool opt_startui = false;
-    bool opt_silent = true;
+    bool opt_silent = false;
     bool opt_showrt = false;
-    bool opt_nomenu = true;
+    bool opt_nomenu = false;
     bool opt_prerun = false;
     bool opt_langcp = false;  // True if command line option -langcp is specified, always use codepage specified by the language file
     bool opt_debug = false;
-    bool opt_nogui = true;
+    bool opt_nogui = false;
     bool opt_nolog = false;
-    bool opt_exit = true;
+    bool opt_exit = false;
     bool opt_test = false;
-    bool opt_headless = true;
+    bool opt_headless = false;
 };
 
 #endif
